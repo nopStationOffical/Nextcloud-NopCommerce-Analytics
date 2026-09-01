@@ -17,7 +17,7 @@
     "@nextcloud/axios": "^2.5.1",
     "@nextcloud/vue": "^9.8.2",
     "chart.js": "^4.4.8",
-    "vue": "^3.5.41",
+    "vue": "^3.5.42",
     "vue-chartjs": "^5.3.2"
   },
   "devDependencies": {
