@@ -16,7 +16,7 @@ class ExportService {
 	public function __construct(
 		private IRootFolder $rootFolder,
 		private AnalyticsCalculatorService $analyticsService,
-		private LoggerInterface $logger
+		private LoggerInterface $logger,
 	) {
 	}
 
@@ -25,7 +25,7 @@ class ExportService {
 		?string $startDate = null,
 		?string $endDate = null,
 		int $storeId = 0,
-		string $groupBy = 'day'
+		string $groupBy = 'day',
 	): array {
 		$data = $this->analyticsService->getSalesSummary($startDate, $endDate, $storeId, $groupBy);
 

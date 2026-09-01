@@ -28,7 +28,7 @@ class SyncService {
 		private ProductMapper $productMapper,
 		private SyncLogMapper $syncLogMapper,
 		private IConfig $config,
-		private LoggerInterface $logger
+		private LoggerInterface $logger,
 	) {
 	}
 
@@ -145,7 +145,7 @@ class SyncService {
 				$customer->setUsername($cData['Username'] ?? null);
 				$customer->setFullName($cData['FullName'] ?? null);
 				$customer->setActive((bool)($cData['Active'] ?? true));
-				
+
 				$rawCreated = $cData['CreatedOn'] ?? null;
 				if ($rawCreated !== null && trim((string)$rawCreated) !== '') {
 					$ts = strtotime((string)$rawCreated);

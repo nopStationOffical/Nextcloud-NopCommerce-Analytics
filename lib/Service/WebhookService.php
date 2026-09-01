@@ -27,7 +27,7 @@ class WebhookService {
 		private CustomerMapper $customerMapper,
 		private ProductMapper $productMapper,
 		private SyncLogMapper $syncLogMapper,
-		private LoggerInterface $logger
+		private LoggerInterface $logger,
 	) {
 	}
 

@@ -1,9 +1,9 @@
 {
     "openapi": "3.0.3",
     "info": {
-        "title": "app_template",
-        "version": "0.0.1",
-        "description": "An example summary",
+        "title": "nopstation_analytics",
+        "version": "1.0.4",
+        "description": "Synchronizes raw e-commerce entities (orders, customers, products, shipments) from nopCommerce via REST APIs and Webhooks, stores them locally, and generates executive KPI dashboards, sales summaries, time-series trends, customer segmentation, bestseller rankings, and automated report exports.",
         "license": {
             "name": "AGPL-3.0-or-later"
         }
@@ -47,10 +47,10 @@
         }
     },
     "paths": {
-        "/ocs/v2.php/apps/app_template/api": {
+        "/ocs/v2.php/apps/nopstation_analytics/api": {
             "get": {
                 "operationId": "api-index",
-                "summary": "An example API endpoint",
+                "summary": "Health check / ping endpoint",
                 "tags": [
                     "api"
                 ],
@@ -76,7 +76,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Data returned",
+                        "description": "The API is active and running",
                         "content": {
                             "application/json": {
                                 "schema": {

@@ -16,7 +16,7 @@ class ScheduledSyncJob extends TimedJob {
 	public function __construct(
 		ITimeFactory $time,
 		private SyncService $syncService,
-		private LoggerInterface $logger
+		private LoggerInterface $logger,
 	) {
 		parent::__construct($time);
 		$this->setInterval(900); // 15 minutes

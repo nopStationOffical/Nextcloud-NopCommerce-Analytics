@@ -23,7 +23,7 @@ class AnalyticsController extends Controller {
 		IRequest $request,
 		private AnalyticsCalculatorService $analyticsService,
 		private ExportService $exportService,
-		private IUserSession $userSession
+		private IUserSession $userSession,
 	) {
 		parent::__construct(self::APP_ID, $request);
 	}
@@ -130,7 +130,7 @@ class AnalyticsController extends Controller {
 		?string $endDate = null,
 		int $storeId = 0,
 		string $groupBy = 'day',
-		string $reportType = 'summary'
+		string $reportType = 'summary',
 	): JSONResponse {
 		try {
 			$user = $this->userSession->getUser();

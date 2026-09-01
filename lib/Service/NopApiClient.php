@@ -27,7 +27,7 @@ class NopApiClient {
 	public function __construct(
 		private IConfig $config,
 		private IClientService $clientService,
-		private LoggerInterface $logger
+		private LoggerInterface $logger,
 	) {
 	}
 
