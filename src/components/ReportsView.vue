@@ -10,7 +10,25 @@ import {
 	type LowStockItem,
 } from '../services/api'
 
-const activeSubTab = ref<'summary' | 'customers' | 'lowstock'>('summary')
+const props = defineProps<{ subTab?: string }>()
+const emit = defineEmits<{ (e: 'update:subTab', tab: 'summary' | 'customers' | 'lowstock'): void }>()
+
+const initialTab = (props.subTab && ['summary', 'customers', 'lowstock'].includes(props.subTab))
+	? (props.subTab as 'summary' | 'customers' | 'lowstock')
+	: 'summary'
+
+const activeSubTab = ref<'summary' | 'customers' | 'lowstock'>(initialTab)
+
+watch(() => props.subTab, (newVal) => {
+	if (newVal && ['summary', 'customers', 'lowstock'].includes(newVal)) {
+		activeSubTab.value = newVal as 'summary' | 'customers' | 'lowstock'
+	}
+})
+
+watch(activeSubTab, (newTab) => {
+	emit('update:subTab', newTab)
+})
+
 const loading = ref(false)
 const groupBy = ref('day')
 const exportMsg = ref('')
