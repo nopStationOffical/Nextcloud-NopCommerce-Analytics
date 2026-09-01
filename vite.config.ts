@@ -6,8 +6,21 @@ export default createAppConfig(
 		main: resolve(join('src', 'main.ts')),
 	},
 	{
-		createEmptyCSSEntryPoints: true,
+		createEmptyCSSEntryPoints: false,
 		extractLicenseInformation: true,
 		thirdPartyLicense: false,
+		inlineCSS: true,
+		assetFileNames: (assetInfo: any) => {
+			const names = assetInfo.names || (assetInfo.name ? [assetInfo.name] : [])
+			if (names.some((n: string) => n.endsWith('.css'))) {
+				return 'css/nopstation_analytics-main.css'
+			}
+			return undefined
+		},
+		config: {
+			build: {
+				cssCodeSplit: false,
+			},
+		},
 	},
 )

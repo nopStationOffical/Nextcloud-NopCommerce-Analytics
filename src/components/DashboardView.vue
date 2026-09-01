@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import { api, type KpiData, type TrendData, type BestsellerItem } from '../services/api'
+import {
+	api,
+	type KpiData,
+	type TrendData,
+	type BestsellerItem,
+	type ShipmentOverviewData,
+} from '../services/api'
 import { Line } from 'vue-chartjs'
 import {
 	Chart as ChartJS,
@@ -17,7 +23,7 @@ import {
 ChartJS.register(Title, Tooltip, Legend, LineElement, PointElement, CategoryScale, LinearScale, Filler)
 
 const loading = ref(false)
-const selectedRange = ref('30days')
+const selectedRange = ref('all')
 const selectedStore = ref(0)
 
 const kpis = ref<KpiData>({
@@ -40,6 +46,19 @@ const trends = ref<TrendData>({
 })
 
 const bestsellers = ref<BestsellerItem[]>([])
+
+const shipments = ref<ShipmentOverviewData>({
+	notYetShipped: 0,
+	partiallyShipped: 0,
+	shipped: 0,
+	delivered: 0,
+	shippingNotRequired: 0,
+	totalShippableOrders: 0,
+	fulfilledOrders: 0,
+	fulfillmentRate: 0,
+	totalShippingFees: 0,
+	recentShipments: [],
+})
 
 const dateFilters = computed(() => {
 	const now = new Date()
@@ -119,14 +138,16 @@ const loadDashboardData = async () => {
 	loading.value = true
 	try {
 		const params = dateFilters.value
-		const [kpiRes, trendRes, bestsellersRes] = await Promise.all([
+		const [kpiRes, trendRes, bestsellersRes, shipmentRes] = await Promise.all([
 			api.getKpis(params),
 			api.getTrends({ ...params, interval: selectedRange.value === 'year' ? 'month' : 'day' }),
 			api.getBestsellers({ ...params, limit: 7 }),
+			api.getShipments(params),
 		])
 		kpis.value = kpiRes
 		trends.value = trendRes
 		bestsellers.value = bestsellersRes
+		shipments.value = shipmentRes
 	} catch (err) {
 		console.error('Failed to load dashboard metrics', err)
 	} finally {
@@ -145,6 +166,16 @@ onMounted(() => {
 const formatCurrency = (val: number): string => {
 	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0)
 }
+
+const formatDate = (dateStr?: string): string => {
+	if (!dateStr) return '-'
+	try {
+		const d = new Date(dateStr)
+		return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+	} catch {
+		return dateStr
+	}
+}
 </script>
 
 <template>
@@ -153,7 +184,7 @@ const formatCurrency = (val: number): string => {
 		<div class="header-bar">
 			<div class="header-title">
 				<h2>Sales Analytics Dashboard</h2>
-				<p class="subtitle">Real-time e-commerce performance overview</p>
+				<p class="subtitle">Real-time e-commerce performance and logistics overview</p>
 			</div>
 			<div class="controls-row">
 				<select v-model="selectedRange" class="filter-select">
@@ -227,7 +258,7 @@ const formatCurrency = (val: number): string => {
 			</div>
 		</div>
 
-		<!-- Charts & Tables Section -->
+		<!-- Charts & Bestsellers Section -->
 		<div class="content-row">
 			<!-- Trend Chart -->
 			<div class="chart-panel">
@@ -263,6 +294,121 @@ const formatCurrency = (val: number): string => {
 							</td>
 							<td class="text-right font-bold">{{ item.totalQuantity }}</td>
 							<td class="text-right text-success">{{ formatCurrency(item.totalAmount) }}</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<!-- NEW: Shipment & Fulfillment Overview Section -->
+		<div class="shipment-overview-section">
+			<div class="section-header">
+				<div>
+					<h3 class="section-title">🚚 Shipment &amp; Order Fulfillment Overview</h3>
+					<p class="section-subtitle">Logistics pipeline, shipping status distribution, and fulfillment rate</p>
+				</div>
+				<div class="fulfillment-badge">
+					<span class="fulfillment-label">Overall Fulfillment Rate:</span>
+					<span class="fulfillment-pct">{{ shipments.fulfillmentRate }}%</span>
+				</div>
+			</div>
+
+			<!-- Fulfillment Status KPI Cards -->
+			<div class="shipping-kpi-grid">
+				<div class="ship-kpi-card card-pending">
+					<div class="ship-kpi-header">
+						<span class="ship-icon">⏳</span>
+						<span v-if="shipments.notYetShipped > 0" class="action-tag">Awaiting Dispatch</span>
+					</div>
+					<div class="ship-kpi-value">{{ shipments.notYetShipped }}</div>
+					<div class="ship-kpi-label">Not Yet Shipped</div>
+					<div class="ship-kpi-sub">Needs warehouse fulfillment</div>
+				</div>
+
+				<div class="ship-kpi-card card-transit">
+					<div class="ship-kpi-header">
+						<span class="ship-icon">🚚</span>
+					</div>
+					<div class="ship-kpi-value">{{ shipments.shipped + shipments.partiallyShipped }}</div>
+					<div class="ship-kpi-label">In Transit / Shipped</div>
+					<div class="ship-kpi-sub">En route to customers</div>
+				</div>
+
+				<div class="ship-kpi-card card-delivered">
+					<div class="ship-kpi-header">
+						<span class="ship-icon">✅</span>
+					</div>
+					<div class="ship-kpi-value">{{ shipments.delivered }}</div>
+					<div class="ship-kpi-label">Delivered</div>
+					<div class="ship-kpi-sub">Successfully fulfilled</div>
+				</div>
+
+				<div class="ship-kpi-card card-progress">
+					<div class="ship-kpi-header">
+						<span class="ship-icon">📦</span>
+						<span class="rate-num">{{ shipments.fulfilledOrders }} / {{ shipments.totalShippableOrders }}</span>
+					</div>
+					<div class="progress-bar-container">
+						<div
+							class="progress-bar-fill"
+							:style="{ width: `${Math.min(shipments.fulfillmentRate, 100)}%` }"
+						></div>
+					</div>
+					<div class="ship-kpi-label">Fulfillment Efficiency</div>
+					<div class="ship-kpi-sub">{{ shipments.fulfillmentRate }}% of shippable orders fulfilled</div>
+				</div>
+			</div>
+
+			<!-- Recent Orders Logistics Feed -->
+			<div class="recent-shipments-panel">
+				<div class="panel-header">
+					<h4>Recent Orders Fulfillment Feed</h4>
+					<span class="badge">Showing Latest {{ shipments.recentShipments.length }} Orders</span>
+				</div>
+
+				<div v-if="shipments.recentShipments.length === 0" class="empty-state">
+					No recent shipments found for this time period.
+				</div>
+				<table v-else class="styled-table shipment-table">
+					<thead>
+						<tr>
+							<th>Order #</th>
+							<th>Customer</th>
+							<th>Date</th>
+							<th>Shipping Method</th>
+							<th>Order Status</th>
+							<th>Shipping Status</th>
+							<th class="text-right">Total</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr v-for="order in shipments.recentShipments" :key="order.orderId">
+							<td class="font-bold">
+								<span class="order-id-pill">{{ order.customOrderNumber }}</span>
+							</td>
+							<td>
+								<div class="customer-info-cell">
+									<span class="cust-name font-bold">{{ order.customerName }}</span>
+									<span class="cust-email">{{ order.customerEmail }}</span>
+								</div>
+							</td>
+							<td class="date-cell">{{ formatDate(order.createdOnUtc) }}</td>
+							<td>
+								<span class="shipping-method-tag">{{ order.shippingMethod || 'Standard' }}</span>
+							</td>
+							<td>
+								<span class="status-pill" :class="order.orderStatusClass">
+									{{ order.orderStatus }}
+								</span>
+							</td>
+							<td>
+								<span class="status-pill" :class="order.shippingStatusClass">
+									{{ order.shippingStatus }}
+								</span>
+							</td>
+							<td class="text-right font-bold text-success">
+								{{ formatCurrency(order.orderTotal) }}
+							</td>
 						</tr>
 					</tbody>
 				</table>
@@ -427,7 +573,7 @@ const formatCurrency = (val: number): string => {
 	align-items: center;
 }
 
-.panel-header h3 {
+.panel-header h3, .panel-header h4 {
 	margin: 0;
 	font-size: 16px;
 	font-weight: 600;
@@ -475,5 +621,237 @@ const formatCurrency = (val: number): string => {
 	text-align: center;
 	color: var(--color-text-maxcontrast);
 	font-size: 13px;
+}
+
+/* ==========================================================================
+   Shipment Overview Section Styles
+   ========================================================================== */
+.shipment-overview-section {
+	background: var(--color-main-background);
+	border: 1px solid var(--color-border);
+	border-radius: 14px;
+	padding: 24px;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.section-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.section-title {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 700;
+}
+
+.section-subtitle {
+	margin: 4px 0 0 0;
+	color: var(--color-text-maxcontrast);
+	font-size: 13px;
+}
+
+.fulfillment-badge {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: var(--color-background-hover);
+	padding: 6px 14px;
+	border-radius: 20px;
+}
+
+.fulfillment-label {
+	font-size: 12px;
+	color: var(--color-text-maxcontrast);
+	font-weight: 600;
+}
+
+.fulfillment-pct {
+	font-size: 16px;
+	font-weight: 700;
+	color: #27883d;
+}
+
+.shipping-kpi-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 16px;
+}
+
+.ship-kpi-card {
+	background: var(--color-background-hover);
+	border: 1px solid var(--color-border);
+	border-radius: 12px;
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.card-pending {
+	border-left: 4px solid #eab308;
+}
+
+.card-transit {
+	border-left: 4px solid #0082c9;
+}
+
+.card-delivered {
+	border-left: 4px solid #46ba61;
+}
+
+.card-progress {
+	border-left: 4px solid #8b5cf6;
+}
+
+.ship-kpi-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.ship-icon {
+	font-size: 20px;
+}
+
+.action-tag {
+	background: rgba(234, 179, 8, 0.2);
+	color: #a16207;
+	font-size: 11px;
+	font-weight: 600;
+	padding: 2px 8px;
+	border-radius: 10px;
+}
+
+.rate-num {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--color-text-maxcontrast);
+}
+
+.ship-kpi-value {
+	font-size: 26px;
+	font-weight: 700;
+	color: var(--color-main-text);
+}
+
+.ship-kpi-label {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--color-main-text);
+}
+
+.ship-kpi-sub {
+	font-size: 11px;
+	color: var(--color-text-maxcontrast);
+}
+
+.progress-bar-container {
+	width: 100%;
+	height: 8px;
+	background: var(--color-border);
+	border-radius: 4px;
+	overflow: hidden;
+	margin: 6px 0;
+}
+
+.progress-bar-fill {
+	height: 100%;
+	background: #8b5cf6;
+	border-radius: 4px;
+	transition: width 0.4s ease;
+}
+
+/* Recent Shipments Feed */
+.recent-shipments-panel {
+	background: var(--color-main-background);
+	border: 1px solid var(--color-border);
+	border-radius: 10px;
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.order-id-pill {
+	font-family: monospace;
+	background: var(--color-background-hover);
+	padding: 2px 8px;
+	border-radius: 6px;
+	font-size: 12px;
+}
+
+.customer-info-cell {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.cust-email {
+	font-size: 11px;
+	color: var(--color-text-maxcontrast);
+}
+
+.shipping-method-tag {
+	font-size: 12px;
+	background: var(--color-background-hover);
+	padding: 2px 8px;
+	border-radius: 4px;
+	color: var(--color-text-maxcontrast);
+}
+
+/* Status Badges */
+.status-pill {
+	display: inline-block;
+	padding: 3px 10px;
+	border-radius: 12px;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.status-complete {
+	background: rgba(70, 186, 97, 0.15);
+	color: #27883d;
+}
+
+.status-processing {
+	background: rgba(0, 130, 201, 0.15);
+	color: #0082c9;
+}
+
+.status-pending {
+	background: rgba(234, 179, 8, 0.15);
+	color: #a16207;
+}
+
+.status-cancelled {
+	background: rgba(233, 50, 45, 0.15);
+	color: #c02824;
+}
+
+.shipping-delivered {
+	background: rgba(70, 186, 97, 0.15);
+	color: #27883d;
+}
+
+.shipping-shipped {
+	background: rgba(0, 130, 201, 0.15);
+	color: #0082c9;
+}
+
+.shipping-pending {
+	background: rgba(234, 179, 8, 0.15);
+	color: #a16207;
+}
+
+.shipping-not-required {
+	background: var(--color-background-hover);
+	color: var(--color-text-maxcontrast);
 }
 </style>

@@ -17,6 +17,8 @@ return [
 		['name' => 'analytics#get_trends', 'url' => '/api/v1/analytics/trends', 'verb' => 'GET'],
 		['name' => 'analytics#get_bestsellers', 'url' => '/api/v1/analytics/bestsellers', 'verb' => 'GET'],
 		['name' => 'analytics#get_customers', 'url' => '/api/v1/analytics/customers', 'verb' => 'GET'],
+		['name' => 'analytics#get_customer_orders', 'url' => '/api/v1/analytics/customers/{customerId}/orders', 'verb' => 'GET'],
+		['name' => 'analytics#get_shipments', 'url' => '/api/v1/analytics/shipments', 'verb' => 'GET'],
 		['name' => 'analytics#get_summary', 'url' => '/api/v1/analytics/summary', 'verb' => 'GET'],
 		['name' => 'analytics#get_low_stock', 'url' => '/api/v1/analytics/lowstock', 'verb' => 'GET'],
 		['name' => 'analytics#export_summary', 'url' => '/api/v1/analytics/export', 'verb' => 'POST'],

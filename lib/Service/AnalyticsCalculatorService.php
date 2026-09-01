@@ -188,6 +188,39 @@ class AnalyticsCalculatorService {
 		], $rows);
 	}
 
+	public static function getOrderStatusLabel(int $statusId): array {
+		return match ($statusId) {
+			10 => ['label' => 'Pending', 'class' => 'status-pending'],
+			20 => ['label' => 'Processing', 'class' => 'status-processing'],
+			30 => ['label' => 'Complete', 'class' => 'status-complete'],
+			40 => ['label' => 'Cancelled', 'class' => 'status-cancelled'],
+			default => ['label' => 'Unknown (' . $statusId . ')', 'class' => 'status-default'],
+		};
+	}
+
+	public static function getPaymentStatusLabel(int $statusId): array {
+		return match ($statusId) {
+			10 => ['label' => 'Pending', 'class' => 'payment-pending'],
+			20 => ['label' => 'Authorized', 'class' => 'payment-authorized'],
+			30 => ['label' => 'Paid', 'class' => 'payment-paid'],
+			35 => ['label' => 'Partially Refunded', 'class' => 'payment-refunded'],
+			40 => ['label' => 'Refunded', 'class' => 'payment-refunded'],
+			50 => ['label' => 'Voided', 'class' => 'payment-voided'],
+			default => ['label' => 'Unknown (' . $statusId . ')', 'class' => 'payment-default'],
+		};
+	}
+
+	public static function getShippingStatusLabel(int $statusId): array {
+		return match ($statusId) {
+			10 => ['label' => 'Shipping Not Required', 'class' => 'shipping-not-required'],
+			20 => ['label' => 'Not Yet Shipped', 'class' => 'shipping-pending'],
+			25 => ['label' => 'Partially Shipped', 'class' => 'shipping-partial'],
+			30 => ['label' => 'Shipped', 'class' => 'shipping-shipped'],
+			40 => ['label' => 'Delivered', 'class' => 'shipping-delivered'],
+			default => ['label' => 'Unknown (' . $statusId . ')', 'class' => 'shipping-default'],
+		};
+	}
+
 	public function getCustomerSegmentation(?string $startDate = null, ?string $endDate = null): array {
 		$qb = $this->db->getQueryBuilder();
 
@@ -196,7 +229,9 @@ class AnalyticsCalculatorService {
 			'customer_email',
 			'customer_full_name',
 			$qb->createFunction('COUNT(*) as order_count'),
-			$qb->createFunction('COALESCE(SUM(order_total), 0) as total_spent')
+			$qb->createFunction('COALESCE(SUM(order_total), 0) as total_spent'),
+			$qb->createFunction('MAX(created_on_utc) as last_order_date'),
+			$qb->createFunction('MIN(created_on_utc) as first_order_date')
 		)
 		->from('nop_orders')
 		->where($qb->expr()->neq('order_status_id', $qb->createNamedParameter(40)));
@@ -221,21 +256,24 @@ class AnalyticsCalculatorService {
 
 		foreach ($rows as $row) {
 			$orders = (int)$row['order_count'];
+			$segment = $orders === 1 ? 'new' : 'returning';
 			if ($orders === 1) {
 				$newCustomers++;
 			} elseif ($orders > 1) {
 				$returningCustomers++;
 			}
 
-			if (count($topCustomers) < 10) {
-				$topCustomers[] = [
-					'customerId' => (int)$row['customer_id'],
-					'email' => (string)($row['customer_email'] ?? 'Customer ' . $row['customer_id']),
-					'fullName' => (string)($row['customer_full_name'] ?? 'Anonymous'),
-					'orderCount' => $orders,
-					'totalSpent' => round((float)$row['total_spent'], 2),
-				];
-			}
+			$topCustomers[] = [
+				'customerId' => (int)$row['customer_id'],
+				'email' => (string)($row['customer_email'] ?? 'Customer ' . $row['customer_id']),
+				'fullName' => (string)($row['customer_full_name'] ?? 'Anonymous'),
+				'orderCount' => $orders,
+				'totalSpent' => round((float)$row['total_spent'], 2),
+				'lastOrderDate' => (string)($row['last_order_date'] ?? ''),
+				'firstOrderDate' => (string)($row['first_order_date'] ?? ''),
+				'segment' => $segment,
+				'segmentLabel' => $orders === 1 ? 'First-Time' : 'Returning',
+			];
 		}
 
 		return [
@@ -288,6 +326,208 @@ class AnalyticsCalculatorService {
 			'tax' => round((float)$row['tax'], 2),
 			'orderTotal' => round((float)$row['order_total'], 2),
 		], $rows);
+	}
+
+	public function getCustomerOrders(int $customerId): array {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select(
+			'o.nop_order_id',
+			'o.custom_order_number',
+			'o.order_status_id',
+			'o.payment_status_id',
+			'o.shipping_status_id',
+			'o.order_subtotal_incl_tax',
+			'o.order_shipping',
+			'o.order_tax',
+			'o.order_total',
+			'o.profit',
+			'o.shipping_method',
+			'o.created_on_utc'
+		)
+		->from('nop_orders', 'o')
+		->where($qb->expr()->eq('o.customer_id', $qb->createNamedParameter($customerId)))
+		->orderBy('o.created_on_utc', 'DESC');
+
+		$orders = $qb->executeQuery()->fetchAll();
+
+		if (empty($orders)) {
+			return [];
+		}
+
+		$orderIds = array_column($orders, 'nop_order_id');
+		$itemsQb = $this->db->getQueryBuilder();
+		$itemsQb->select(
+			'order_id',
+			'product_id',
+			'product_name',
+			'product_sku',
+			'quantity',
+			'unit_price',
+			'total_price'
+		)
+		->from('nop_order_items')
+		->where($itemsQb->expr()->in('order_id', $itemsQb->createNamedParameter($orderIds, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)));
+
+		$itemsRows = $itemsQb->executeQuery()->fetchAll();
+
+		$itemsByOrder = [];
+		foreach ($itemsRows as $item) {
+			$oid = (int)$item['order_id'];
+			$itemsByOrder[$oid][] = [
+				'productId' => (int)$item['product_id'],
+				'productName' => (string)$item['product_name'],
+				'sku' => (string)($item['product_sku'] ?? ''),
+				'quantity' => (int)$item['quantity'],
+				'unitPrice' => round((float)$item['unit_price'], 2),
+				'totalPrice' => round((float)$item['total_price'], 2),
+			];
+		}
+
+		return array_map(function($row) use ($itemsByOrder) {
+			$oid = (int)$row['nop_order_id'];
+			$orderStatus = self::getOrderStatusLabel((int)$row['order_status_id']);
+			$paymentStatus = self::getPaymentStatusLabel((int)$row['payment_status_id']);
+			$shippingStatus = self::getShippingStatusLabel((int)$row['shipping_status_id']);
+			$items = $itemsByOrder[$oid] ?? [];
+
+			return [
+				'orderId' => $oid,
+				'customOrderNumber' => (string)($row['custom_order_number'] ?? '#' . $oid),
+				'createdOnUtc' => (string)$row['created_on_utc'],
+				'orderStatusId' => (int)$row['order_status_id'],
+				'orderStatus' => $orderStatus['label'],
+				'orderStatusClass' => $orderStatus['class'],
+				'paymentStatusId' => (int)$row['payment_status_id'],
+				'paymentStatus' => $paymentStatus['label'],
+				'paymentStatusClass' => $paymentStatus['class'],
+				'shippingStatusId' => (int)$row['shipping_status_id'],
+				'shippingStatus' => $shippingStatus['label'],
+				'shippingStatusClass' => $shippingStatus['class'],
+				'shippingMethod' => (string)($row['shipping_method'] ?? 'Standard'),
+				'orderTotal' => round((float)$row['order_total'], 2),
+				'shipping' => round((float)$row['order_shipping'], 2),
+				'tax' => round((float)$row['order_tax'], 2),
+				'profit' => round((float)$row['profit'], 2),
+				'itemCount' => array_sum(array_column($items, 'quantity')),
+				'items' => $items,
+			];
+		}, $orders);
+	}
+
+	public function getShipmentOverview(?string $startDate = null, ?string $endDate = null, int $storeId = 0): array {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select(
+			'shipping_status_id',
+			$qb->createFunction('COUNT(*) as cnt'),
+			$qb->createFunction('COALESCE(SUM(order_shipping), 0) as shipping_fee')
+		)
+		->from('nop_orders')
+		->where($qb->expr()->neq('order_status_id', $qb->createNamedParameter(40)));
+
+		if ($startDate !== null && $startDate !== '') {
+			$qb->andWhere($qb->expr()->gte('created_on_utc', $qb->createNamedParameter($startDate)));
+		}
+		if ($endDate !== null && $endDate !== '') {
+			$qb->andWhere($qb->expr()->lte('created_on_utc', $qb->createNamedParameter($endDate)));
+		}
+		if ($storeId > 0) {
+			$qb->andWhere($qb->expr()->eq('store_id', $qb->createNamedParameter($storeId)));
+		}
+
+		$qb->groupBy('shipping_status_id');
+		$rows = $qb->executeQuery()->fetchAll();
+
+		$notYetShipped = 0;
+		$partiallyShipped = 0;
+		$shipped = 0;
+		$delivered = 0;
+		$shippingNotRequired = 0;
+		$totalShippingFees = 0.0;
+
+		foreach ($rows as $row) {
+			$statusId = (int)$row['shipping_status_id'];
+			$cnt = (int)$row['cnt'];
+			$fee = (float)$row['shipping_fee'];
+			$totalShippingFees += $fee;
+
+			match ($statusId) {
+				10 => $shippingNotRequired += $cnt,
+				20 => $notYetShipped += $cnt,
+				25 => $partiallyShipped += $cnt,
+				30 => $shipped += $cnt,
+				40 => $delivered += $cnt,
+				default => null,
+			};
+		}
+
+		$shippableOrders = $notYetShipped + $partiallyShipped + $shipped + $delivered;
+		$fulfilledOrders = $shipped + $delivered;
+		$fulfillmentRate = $shippableOrders > 0 ? round(($fulfilledOrders / $shippableOrders) * 100, 1) : 0.0;
+
+		$recentQb = $this->db->getQueryBuilder();
+		$recentQb->select(
+			'nop_order_id',
+			'custom_order_number',
+			'customer_id',
+			'customer_full_name',
+			'customer_email',
+			'order_status_id',
+			'shipping_status_id',
+			'shipping_method',
+			'order_shipping',
+			'order_total',
+			'created_on_utc'
+		)
+		->from('nop_orders')
+		->where($recentQb->expr()->neq('order_status_id', $recentQb->createNamedParameter(40)));
+
+		if ($startDate !== null && $startDate !== '') {
+			$recentQb->andWhere($recentQb->expr()->gte('created_on_utc', $recentQb->createNamedParameter($startDate)));
+		}
+		if ($endDate !== null && $endDate !== '') {
+			$recentQb->andWhere($recentQb->expr()->lte('created_on_utc', $recentQb->createNamedParameter($endDate)));
+		}
+		if ($storeId > 0) {
+			$recentQb->andWhere($recentQb->expr()->eq('store_id', $recentQb->createNamedParameter($storeId)));
+		}
+
+		$recentQb->orderBy('created_on_utc', 'DESC')
+			->setMaxResults(8);
+
+		$recentRows = $recentQb->executeQuery()->fetchAll();
+		$recentShipments = array_map(function($r) {
+			$shippingStatus = self::getShippingStatusLabel((int)$r['shipping_status_id']);
+			$orderStatus = self::getOrderStatusLabel((int)$r['order_status_id']);
+			return [
+				'orderId' => (int)$r['nop_order_id'],
+				'customOrderNumber' => (string)($r['custom_order_number'] ?? '#' . $r['nop_order_id']),
+				'customerId' => (int)$r['customer_id'],
+				'customerName' => (string)($r['customer_full_name'] ?? 'Customer ' . $r['customer_id']),
+				'customerEmail' => (string)($r['customer_email'] ?? ''),
+				'orderStatus' => $orderStatus['label'],
+				'orderStatusClass' => $orderStatus['class'],
+				'shippingStatusId' => (int)$r['shipping_status_id'],
+				'shippingStatus' => $shippingStatus['label'],
+				'shippingStatusClass' => $shippingStatus['class'],
+				'shippingMethod' => (string)($r['shipping_method'] ?? 'Standard Ground'),
+				'orderShipping' => round((float)$r['order_shipping'], 2),
+				'orderTotal' => round((float)$r['order_total'], 2),
+				'createdOnUtc' => (string)$r['created_on_utc'],
+			];
+		}, $recentRows);
+
+		return [
+			'notYetShipped' => $notYetShipped,
+			'partiallyShipped' => $partiallyShipped,
+			'shipped' => $shipped,
+			'delivered' => $delivered,
+			'shippingNotRequired' => $shippingNotRequired,
+			'totalShippableOrders' => $shippableOrders,
+			'fulfilledOrders' => $fulfilledOrders,
+			'fulfillmentRate' => $fulfillmentRate,
+			'totalShippingFees' => round($totalShippingFees, 2),
+			'recentShipments' => $recentShipments,
+		];
 	}
 
 	public function getLowStockAlerts(int $threshold = 10): array {

@@ -184,4 +184,42 @@ class AnalyticsController extends Controller {
 			);
 		}
 	}
+
+	/**
+	 * @NoAdminRequired
+	 * @NoCSRFRequired
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	#[FrontpageRoute(verb: 'GET', url: '/api/v1/analytics/customers/{customerId}/orders')]
+	public function getCustomerOrders(int $customerId): JSONResponse {
+		try {
+			$data = $this->analyticsService->getCustomerOrders($customerId);
+			return new JSONResponse(['Data' => $data, 'Message' => null, 'ErrorList' => []]);
+		} catch (Exception $e) {
+			return new JSONResponse(
+				['Data' => null, 'Message' => $e->getMessage(), 'ErrorList' => [$e->getMessage()]],
+				Http::STATUS_INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * @NoAdminRequired
+	 * @NoCSRFRequired
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	#[FrontpageRoute(verb: 'GET', url: '/api/v1/analytics/shipments')]
+	public function getShipments(?string $startDate = null, ?string $endDate = null, int $storeId = 0): JSONResponse {
+		try {
+			$data = $this->analyticsService->getShipmentOverview($startDate, $endDate, $storeId);
+			return new JSONResponse(['Data' => $data, 'Message' => null, 'ErrorList' => []]);
+		} catch (Exception $e) {
+			return new JSONResponse(
+				['Data' => null, 'Message' => $e->getMessage(), 'ErrorList' => [$e->getMessage()]],
+				Http::STATUS_INTERNAL_SERVER_ERROR
+			);
+		}
+	}
 }

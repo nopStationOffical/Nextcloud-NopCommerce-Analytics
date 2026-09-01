@@ -5,7 +5,7 @@
 	<name>nopCommerce Sales Analytics</name>
 	<summary>nopCommerce Sales Analytics &amp; Reporting Studio for Nextcloud</summary>
 	<description>Synchronizes raw e-commerce entities (orders, customers, products, shipments) from nopCommerce via REST APIs and Webhooks, stores them locally, and generates executive KPI dashboards, sales summaries, time-series trends, customer segmentation, bestseller rankings, and automated report exports.</description>
-	<version>1.0.0</version>
+	<version>1.0.1</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="support@nop-station.com" homepage="https://nop-station.com">NopStation</author>
 	<namespace>NopStationAnalytics</namespace>

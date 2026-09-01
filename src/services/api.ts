@@ -35,17 +35,84 @@ export interface BestsellerItem {
 	totalAmount: number
 }
 
+export interface CustomerOrderItem {
+	productId: number
+	productName: string
+	sku: string
+	quantity: number
+	unitPrice: number
+	totalPrice: number
+}
+
+export interface CustomerOrder {
+	orderId: number
+	customOrderNumber: string
+	createdOnUtc: string
+	orderStatusId: number
+	orderStatus: string
+	orderStatusClass: string
+	paymentStatusId: number
+	paymentStatus: string
+	paymentStatusClass: string
+	shippingStatusId: number
+	shippingStatus: string
+	shippingStatusClass: string
+	shippingMethod: string
+	orderTotal: number
+	shipping: number
+	tax: number
+	profit: number
+	itemCount: number
+	items: CustomerOrderItem[]
+}
+
+export interface CustomerItem {
+	customerId: number
+	email: string
+	fullName: string
+	orderCount: number
+	totalSpent: number
+	lastOrderDate?: string
+	firstOrderDate?: string
+	segment?: string
+	segmentLabel?: string
+}
+
 export interface CustomerSegmentData {
 	newCustomers: number
 	returningCustomers: number
 	totalActiveCustomers: number
-	topCustomers: Array<{
-		customerId: number
-		email: string
-		fullName: string
-		orderCount: number
-		totalSpent: number
-	}>
+	topCustomers: CustomerItem[]
+}
+
+export interface ShipmentItem {
+	orderId: number
+	customOrderNumber: string
+	customerId: number
+	customerName: string
+	customerEmail: string
+	orderStatus: string
+	orderStatusClass: string
+	shippingStatusId: number
+	shippingStatus: string
+	shippingStatusClass: string
+	shippingMethod: string
+	orderShipping: number
+	orderTotal: number
+	createdOnUtc: string
+}
+
+export interface ShipmentOverviewData {
+	notYetShipped: number
+	partiallyShipped: number
+	shipped: number
+	delivered: number
+	shippingNotRequired: number
+	totalShippableOrders: number
+	fulfilledOrders: number
+	fulfillmentRate: number
+	totalShippingFees: number
+	recentShipments: ShipmentItem[]
 }
 
 export interface SalesSummaryItem {
@@ -122,6 +189,16 @@ export const api = {
 
 	async getCustomers(params: { startDate?: string; endDate?: string } = {}): Promise<CustomerSegmentData> {
 		const res = await axios.get(buildUrl('/api/v1/analytics/customers'), { params })
+		return res.data.Data
+	},
+
+	async getCustomerOrders(customerId: number): Promise<CustomerOrder[]> {
+		const res = await axios.get(buildUrl(`/api/v1/analytics/customers/${customerId}/orders`))
+		return res.data.Data
+	},
+
+	async getShipments(params: { startDate?: string; endDate?: string; storeId?: number } = {}): Promise<ShipmentOverviewData> {
+		const res = await axios.get(buildUrl('/api/v1/analytics/shipments'), { params })
 		return res.data.Data
 	},
 
