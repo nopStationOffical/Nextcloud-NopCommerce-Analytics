@@ -328,7 +328,22 @@ class AnalyticsCalculatorService {
 		], $rows);
 	}
 
-	public function getCustomerOrders(int $customerId): array {
+	public static function formatPaymentMethod(?string $systemName): string {
+		if (empty($systemName)) {
+			return 'N/A';
+		}
+		return match ($systemName) {
+			'Payments.CheckMoneyOrder' => 'Check / Money Order',
+			'Payments.Manual' => 'Credit Card',
+			'Payments.PayPalStandard' => 'PayPal Standard',
+			'Payments.PayPalSmartPaymentButtons' => 'PayPal',
+			'Payments.CashOnDelivery' => 'Cash On Delivery',
+			'Payments.PurchaseOrder' => 'Purchase Order',
+			default => str_replace(['Payments.', '_'], ['', ' '], $systemName),
+		};
+	}
+
+	public function getCustomerOrders(int $customerId, ?string $startDate = null, ?string $endDate = null): array {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select(
 			'o.nop_order_id',
@@ -338,15 +353,25 @@ class AnalyticsCalculatorService {
 			'o.shipping_status_id',
 			'o.order_subtotal_incl_tax',
 			'o.order_shipping',
+			'o.order_discount',
 			'o.order_tax',
 			'o.order_total',
 			'o.profit',
+			'o.payment_method_system_name',
 			'o.shipping_method',
 			'o.created_on_utc'
 		)
 		->from('nop_orders', 'o')
-		->where($qb->expr()->eq('o.customer_id', $qb->createNamedParameter($customerId)))
-		->orderBy('o.created_on_utc', 'DESC');
+		->where($qb->expr()->eq('o.customer_id', $qb->createNamedParameter($customerId)));
+
+		if ($startDate !== null && $startDate !== '') {
+			$qb->andWhere($qb->expr()->gte('o.created_on_utc', $qb->createNamedParameter($startDate)));
+		}
+		if ($endDate !== null && $endDate !== '') {
+			$qb->andWhere($qb->expr()->lte('o.created_on_utc', $qb->createNamedParameter($endDate)));
+		}
+
+		$qb->orderBy('o.created_on_utc', 'DESC');
 
 		$orders = $qb->executeQuery()->fetchAll();
 
@@ -403,7 +428,112 @@ class AnalyticsCalculatorService {
 				'shippingStatusId' => (int)$row['shipping_status_id'],
 				'shippingStatus' => $shippingStatus['label'],
 				'shippingStatusClass' => $shippingStatus['class'],
+				'paymentMethod' => self::formatPaymentMethod($row['payment_method_system_name'] ?? null),
 				'shippingMethod' => (string)($row['shipping_method'] ?? 'Standard'),
+				'orderDiscount' => round((float)($row['order_discount'] ?? 0), 2),
+				'orderTotal' => round((float)$row['order_total'], 2),
+				'shipping' => round((float)$row['order_shipping'], 2),
+				'tax' => round((float)$row['order_tax'], 2),
+				'profit' => round((float)$row['profit'], 2),
+				'itemCount' => array_sum(array_column($items, 'quantity')),
+				'items' => $items,
+			];
+		}, $orders);
+	}
+
+	public function getOrdersByPeriod(string $period, string $groupBy = 'day', int $storeId = 0): array {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select(
+			'o.nop_order_id',
+			'o.custom_order_number',
+			'o.customer_id',
+			'o.customer_full_name',
+			'o.customer_email',
+			'o.order_status_id',
+			'o.payment_status_id',
+			'o.shipping_status_id',
+			'o.order_subtotal_incl_tax',
+			'o.order_shipping',
+			'o.order_discount',
+			'o.order_tax',
+			'o.order_total',
+			'o.profit',
+			'o.payment_method_system_name',
+			'o.shipping_method',
+			'o.created_on_utc'
+		)
+		->from('nop_orders', 'o')
+		->where($qb->expr()->neq('o.order_status_id', $qb->createNamedParameter(40)));
+
+		$qb->andWhere($qb->expr()->like('o.created_on_utc', $qb->createNamedParameter($period . '%')));
+
+		if ($storeId > 0) {
+			$qb->andWhere($qb->expr()->eq('o.store_id', $qb->createNamedParameter($storeId)));
+		}
+
+		$qb->orderBy('o.created_on_utc', 'DESC');
+
+		$orders = $qb->executeQuery()->fetchAll();
+
+		if (empty($orders)) {
+			return [];
+		}
+
+		$orderIds = array_column($orders, 'nop_order_id');
+		$itemsQb = $this->db->getQueryBuilder();
+		$itemsQb->select(
+			'order_id',
+			'product_id',
+			'product_name',
+			'product_sku',
+			'quantity',
+			'unit_price',
+			'total_price'
+		)
+		->from('nop_order_items')
+		->where($itemsQb->expr()->in('order_id', $itemsQb->createNamedParameter($orderIds, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)));
+
+		$itemsRows = $itemsQb->executeQuery()->fetchAll();
+
+		$itemsByOrder = [];
+		foreach ($itemsRows as $item) {
+			$oid = (int)$item['order_id'];
+			$itemsByOrder[$oid][] = [
+				'productId' => (int)$item['product_id'],
+				'productName' => (string)$item['product_name'],
+				'sku' => (string)($item['product_sku'] ?? ''),
+				'quantity' => (int)$item['quantity'],
+				'unitPrice' => round((float)$item['unit_price'], 2),
+				'totalPrice' => round((float)$item['total_price'], 2),
+			];
+		}
+
+		return array_map(function($row) use ($itemsByOrder) {
+			$oid = (int)$row['nop_order_id'];
+			$orderStatus = self::getOrderStatusLabel((int)$row['order_status_id']);
+			$paymentStatus = self::getPaymentStatusLabel((int)$row['payment_status_id']);
+			$shippingStatus = self::getShippingStatusLabel((int)$row['shipping_status_id']);
+			$items = $itemsByOrder[$oid] ?? [];
+
+			return [
+				'orderId' => $oid,
+				'customOrderNumber' => (string)($row['custom_order_number'] ?? '#' . $oid),
+				'customerId' => (int)$row['customer_id'],
+				'customerName' => (string)($row['customer_full_name'] ?? 'Guest'),
+				'customerEmail' => (string)($row['customer_email'] ?? ''),
+				'createdOnUtc' => (string)$row['created_on_utc'],
+				'orderStatusId' => (int)$row['order_status_id'],
+				'orderStatus' => $orderStatus['label'],
+				'orderStatusClass' => $orderStatus['class'],
+				'paymentStatusId' => (int)$row['payment_status_id'],
+				'paymentStatus' => $paymentStatus['label'],
+				'paymentStatusClass' => $paymentStatus['class'],
+				'shippingStatusId' => (int)$row['shipping_status_id'],
+				'shippingStatus' => $shippingStatus['label'],
+				'shippingStatusClass' => $shippingStatus['class'],
+				'paymentMethod' => self::formatPaymentMethod($row['payment_method_system_name'] ?? null),
+				'shippingMethod' => (string)($row['shipping_method'] ?? 'Standard'),
+				'orderDiscount' => round((float)($row['order_discount'] ?? 0), 2),
 				'orderTotal' => round((float)$row['order_total'], 2),
 				'shipping' => round((float)$row['order_shipping'], 2),
 				'tax' => round((float)$row['order_tax'], 2),

@@ -56,14 +56,21 @@ export interface CustomerOrder {
 	paymentStatusClass: string
 	shippingStatusId: number
 	shippingStatus: string
-	shippingStatusClass: string
-	shippingMethod: string
+	paymentMethod?: string
+	shippingMethod?: string
+	orderDiscount?: number
 	orderTotal: number
 	shipping: number
 	tax: number
 	profit: number
 	itemCount: number
 	items: CustomerOrderItem[]
+}
+
+export interface PeriodOrder extends CustomerOrder {
+	customerId: number
+	customerName: string
+	customerEmail: string
 }
 
 export interface CustomerItem {
@@ -192,8 +199,13 @@ export const api = {
 		return res.data.Data
 	},
 
-	async getCustomerOrders(customerId: number): Promise<CustomerOrder[]> {
-		const res = await axios.get(buildUrl(`/api/v1/analytics/customers/${customerId}/orders`))
+	async getCustomerOrders(customerId: number, params: { startDate?: string; endDate?: string } = {}): Promise<CustomerOrder[]> {
+		const res = await axios.get(buildUrl(`/api/v1/analytics/customers/${customerId}/orders`), { params })
+		return res.data.Data
+	},
+
+	async getPeriodOrders(period: string, groupBy: string = 'day', storeId: number = 0): Promise<PeriodOrder[]> {
+		const res = await axios.get(buildUrl('/api/v1/analytics/summary/orders'), { params: { period, groupBy, storeId } })
 		return res.data.Data
 	},
 

@@ -192,9 +192,28 @@ class AnalyticsController extends Controller {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/api/v1/analytics/customers/{customerId}/orders')]
-	public function getCustomerOrders(int $customerId): JSONResponse {
+	public function getCustomerOrders(int $customerId, ?string $startDate = null, ?string $endDate = null): JSONResponse {
 		try {
-			$data = $this->analyticsService->getCustomerOrders($customerId);
+			$data = $this->analyticsService->getCustomerOrders($customerId, $startDate, $endDate);
+			return new JSONResponse(['Data' => $data, 'Message' => null, 'ErrorList' => []]);
+		} catch (Exception $e) {
+			return new JSONResponse(
+				['Data' => null, 'Message' => $e->getMessage(), 'ErrorList' => [$e->getMessage()]],
+				Http::STATUS_INTERNAL_SERVER_ERROR
+			);
+		}
+	}
+
+	/**
+	 * @NoAdminRequired
+	 * @NoCSRFRequired
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	#[FrontpageRoute(verb: 'GET', url: '/api/v1/analytics/summary/orders')]
+	public function getPeriodOrders(string $period, string $groupBy = 'day', int $storeId = 0): JSONResponse {
+		try {
+			$data = $this->analyticsService->getOrdersByPeriod($period, $groupBy, $storeId);
 			return new JSONResponse(['Data' => $data, 'Message' => null, 'ErrorList' => []]);
 		} catch (Exception $e) {
 			return new JSONResponse(
