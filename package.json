@@ -1,5 +1,5 @@
 {
-  "name": "app_template",
+  "name": "nopstation_analytics",
   "version": "1.0.0",
   "license": "AGPL-3.0-or-later",
   "type": "module",
@@ -14,8 +14,11 @@
     "extends @nextcloud/browserslist-config"
   ],
   "dependencies": {
+    "@nextcloud/axios": "^2.5.1",
     "@nextcloud/vue": "^9.8.2",
-    "vue": "^3.5.41"
+    "chart.js": "^4.4.8",
+    "vue": "^3.5.41",
+    "vue-chartjs": "^5.3.2"
   },
   "devDependencies": {
     "@nextcloud/browserslist-config": "^3.1.2",
