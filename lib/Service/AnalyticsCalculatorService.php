@@ -10,7 +10,7 @@ use OCP\IDBConnection;
 class AnalyticsCalculatorService {
 	public function __construct(
 		private IDBConnection $db,
-		private ProductMapper $productMapper
+		private ProductMapper $productMapper,
 	) {
 	}
 
@@ -26,7 +26,7 @@ class AnalyticsCalculatorService {
 			$qb->createFunction('COALESCE(SUM(order_tax), 0) as total_tax'),
 			$qb->createFunction('COUNT(DISTINCT customer_id) as unique_customers')
 		)
-		->from('nop_orders');
+			->from('nop_orders');
 
 		// Only include active/valid orders (not cancelled = 40)
 		$qb->where($qb->expr()->neq('order_status_id', $qb->createNamedParameter(40)));
@@ -86,9 +86,9 @@ class AnalyticsCalculatorService {
 
 		// Cross-database date grouping expression
 		$dateExpr = match ($interval) {
-			'week' => "SUBSTRING(created_on_utc, 1, 10)", // Fallback group
-			'month' => "SUBSTRING(created_on_utc, 1, 7)",
-			default => "SUBSTRING(created_on_utc, 1, 10)",
+			'week' => 'SUBSTRING(created_on_utc, 1, 10)', // Fallback group
+			'month' => 'SUBSTRING(created_on_utc, 1, 7)',
+			default => 'SUBSTRING(created_on_utc, 1, 10)',
 		};
 
 		$qb->select(
@@ -97,8 +97,8 @@ class AnalyticsCalculatorService {
 			$qb->createFunction('COALESCE(SUM(order_total), 0) as revenue'),
 			$qb->createFunction('COALESCE(SUM(profit), 0) as profit')
 		)
-		->from('nop_orders')
-		->where($qb->expr()->neq('order_status_id', $qb->createNamedParameter(40)));
+			->from('nop_orders')
+			->where($qb->expr()->neq('order_status_id', $qb->createNamedParameter(40)));
 
 		if ($startDate !== null && $startDate !== '') {
 			$qb->andWhere($qb->expr()->gte('created_on_utc', $qb->createNamedParameter($startDate)));
@@ -144,9 +144,9 @@ class AnalyticsCalculatorService {
 			$qb->createFunction('COALESCE(SUM(i.quantity), 0) as total_quantity'),
 			$qb->createFunction('COALESCE(SUM(i.total_price), 0) as total_amount')
 		)
-		->from('nop_order_items', 'i')
-		->join('i', 'nop_orders', 'o', $qb->expr()->eq('i.order_id', 'o.nop_order_id'))
-		->where($qb->expr()->neq('o.order_status_id', $qb->createNamedParameter(40)));
+			->from('nop_order_items', 'i')
+			->join('i', 'nop_orders', 'o', $qb->expr()->eq('i.order_id', 'o.nop_order_id'))
+			->where($qb->expr()->neq('o.order_status_id', $qb->createNamedParameter(40)));
 
 		if ($startDate !== null && $startDate !== '') {
 			$qb->andWhere($qb->expr()->gte('o.created_on_utc', $qb->createNamedParameter($startDate)));
@@ -172,7 +172,7 @@ class AnalyticsCalculatorService {
 				->from('nop_products')
 				->setMaxResults($limit);
 			$sample = $prodQb->executeQuery()->fetchAll();
-			return array_map(fn($p) => [
+			return array_map(fn ($p) => [
 				'productId' => (int)$p['product_id'],
 				'productName' => (string)$p['product_name'],
 				'totalQuantity' => 0,
@@ -180,7 +180,7 @@ class AnalyticsCalculatorService {
 			], $sample);
 		}
 
-		return array_map(fn($row) => [
+		return array_map(fn ($row) => [
 			'productId' => (int)$row['product_id'],
 			'productName' => (string)$row['product_name'],
 			'totalQuantity' => (int)$row['total_quantity'],
@@ -233,8 +233,8 @@ class AnalyticsCalculatorService {
 			$qb->createFunction('MAX(created_on_utc) as last_order_date'),
 			$qb->createFunction('MIN(created_on_utc) as first_order_date')
 		)
-		->from('nop_orders')
-		->where($qb->expr()->neq('order_status_id', $qb->createNamedParameter(40)));
+			->from('nop_orders')
+			->where($qb->expr()->neq('order_status_id', $qb->createNamedParameter(40)));
 
 		if ($startDate !== null && $startDate !== '') {
 			$qb->andWhere($qb->expr()->gte('created_on_utc', $qb->createNamedParameter($startDate)));
@@ -286,9 +286,9 @@ class AnalyticsCalculatorService {
 
 	public function getSalesSummary(?string $startDate = null, ?string $endDate = null, int $storeId = 0, string $groupBy = 'day'): array {
 		$dateExpr = match ($groupBy) {
-			'week' => "SUBSTRING(created_on_utc, 1, 10)",
-			'month' => "SUBSTRING(created_on_utc, 1, 7)",
-			default => "SUBSTRING(created_on_utc, 1, 10)",
+			'week' => 'SUBSTRING(created_on_utc, 1, 10)',
+			'month' => 'SUBSTRING(created_on_utc, 1, 7)',
+			default => 'SUBSTRING(created_on_utc, 1, 10)',
 		};
 
 		$qb = $this->db->getQueryBuilder();
@@ -300,8 +300,8 @@ class AnalyticsCalculatorService {
 			$qb->createFunction('COALESCE(SUM(order_tax), 0) as tax'),
 			$qb->createFunction('COALESCE(SUM(order_total), 0) as order_total')
 		)
-		->from('nop_orders')
-		->where($qb->expr()->neq('order_status_id', $qb->createNamedParameter(40)));
+			->from('nop_orders')
+			->where($qb->expr()->neq('order_status_id', $qb->createNamedParameter(40)));
 
 		if ($startDate !== null && $startDate !== '') {
 			$qb->andWhere($qb->expr()->gte('created_on_utc', $qb->createNamedParameter($startDate)));
@@ -318,7 +318,7 @@ class AnalyticsCalculatorService {
 
 		$rows = $qb->executeQuery()->fetchAll();
 
-		return array_map(fn($row) => [
+		return array_map(fn ($row) => [
 			'summary' => (string)$row['summary_period'],
 			'numberOfOrders' => (int)$row['number_of_orders'],
 			'profit' => round((float)$row['profit'], 2),
@@ -361,8 +361,8 @@ class AnalyticsCalculatorService {
 			'o.shipping_method',
 			'o.created_on_utc'
 		)
-		->from('nop_orders', 'o')
-		->where($qb->expr()->eq('o.customer_id', $qb->createNamedParameter($customerId)));
+			->from('nop_orders', 'o')
+			->where($qb->expr()->eq('o.customer_id', $qb->createNamedParameter($customerId)));
 
 		if ($startDate !== null && $startDate !== '') {
 			$qb->andWhere($qb->expr()->gte('o.created_on_utc', $qb->createNamedParameter($startDate)));
@@ -390,8 +390,8 @@ class AnalyticsCalculatorService {
 			'unit_price',
 			'total_price'
 		)
-		->from('nop_order_items')
-		->where($itemsQb->expr()->in('order_id', $itemsQb->createNamedParameter($orderIds, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)));
+			->from('nop_order_items')
+			->where($itemsQb->expr()->in('order_id', $itemsQb->createNamedParameter($orderIds, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)));
 
 		$itemsRows = $itemsQb->executeQuery()->fetchAll();
 
@@ -408,7 +408,7 @@ class AnalyticsCalculatorService {
 			];
 		}
 
-		return array_map(function($row) use ($itemsByOrder) {
+		return array_map(function ($row) use ($itemsByOrder) {
 			$oid = (int)$row['nop_order_id'];
 			$orderStatus = self::getOrderStatusLabel((int)$row['order_status_id']);
 			$paymentStatus = self::getPaymentStatusLabel((int)$row['payment_status_id']);
@@ -462,8 +462,8 @@ class AnalyticsCalculatorService {
 			'o.shipping_method',
 			'o.created_on_utc'
 		)
-		->from('nop_orders', 'o')
-		->where($qb->expr()->neq('o.order_status_id', $qb->createNamedParameter(40)));
+			->from('nop_orders', 'o')
+			->where($qb->expr()->neq('o.order_status_id', $qb->createNamedParameter(40)));
 
 		$qb->andWhere($qb->expr()->like('o.created_on_utc', $qb->createNamedParameter($period . '%')));
 
@@ -490,8 +490,8 @@ class AnalyticsCalculatorService {
 			'unit_price',
 			'total_price'
 		)
-		->from('nop_order_items')
-		->where($itemsQb->expr()->in('order_id', $itemsQb->createNamedParameter($orderIds, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)));
+			->from('nop_order_items')
+			->where($itemsQb->expr()->in('order_id', $itemsQb->createNamedParameter($orderIds, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)));
 
 		$itemsRows = $itemsQb->executeQuery()->fetchAll();
 
@@ -508,7 +508,7 @@ class AnalyticsCalculatorService {
 			];
 		}
 
-		return array_map(function($row) use ($itemsByOrder) {
+		return array_map(function ($row) use ($itemsByOrder) {
 			$oid = (int)$row['nop_order_id'];
 			$orderStatus = self::getOrderStatusLabel((int)$row['order_status_id']);
 			$paymentStatus = self::getPaymentStatusLabel((int)$row['payment_status_id']);
@@ -551,8 +551,8 @@ class AnalyticsCalculatorService {
 			$qb->createFunction('COUNT(*) as cnt'),
 			$qb->createFunction('COALESCE(SUM(order_shipping), 0) as shipping_fee')
 		)
-		->from('nop_orders')
-		->where($qb->expr()->neq('order_status_id', $qb->createNamedParameter(40)));
+			->from('nop_orders')
+			->where($qb->expr()->neq('order_status_id', $qb->createNamedParameter(40)));
 
 		if ($startDate !== null && $startDate !== '') {
 			$qb->andWhere($qb->expr()->gte('created_on_utc', $qb->createNamedParameter($startDate)));
@@ -608,8 +608,8 @@ class AnalyticsCalculatorService {
 			'order_total',
 			'created_on_utc'
 		)
-		->from('nop_orders')
-		->where($recentQb->expr()->neq('order_status_id', $recentQb->createNamedParameter(40)));
+			->from('nop_orders')
+			->where($recentQb->expr()->neq('order_status_id', $recentQb->createNamedParameter(40)));
 
 		if ($startDate !== null && $startDate !== '') {
 			$recentQb->andWhere($recentQb->expr()->gte('created_on_utc', $recentQb->createNamedParameter($startDate)));
@@ -625,7 +625,7 @@ class AnalyticsCalculatorService {
 			->setMaxResults(8);
 
 		$recentRows = $recentQb->executeQuery()->fetchAll();
-		$recentShipments = array_map(function($r) {
+		$recentShipments = array_map(function ($r) {
 			$shippingStatus = self::getShippingStatusLabel((int)$r['shipping_status_id']);
 			$orderStatus = self::getOrderStatusLabel((int)$r['order_status_id']);
 			return [
@@ -662,7 +662,7 @@ class AnalyticsCalculatorService {
 
 	public function getLowStockAlerts(int $threshold = 10): array {
 		$entities = $this->productMapper->findLowStock($threshold);
-		return array_map(fn($p) => [
+		return array_map(fn ($p) => [
 			'productId' => $p->getNopProductId(),
 			'name' => $p->getName(),
 			'sku' => $p->getSku(),

@@ -9,7 +9,6 @@ use OCA\NopStationAnalytics\Service\NopApiClient;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
-use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IConfig;
@@ -21,7 +20,7 @@ class SettingsController extends Controller {
 	public function __construct(
 		IRequest $request,
 		private NopApiClient $apiClient,
-		private IConfig $config
+		private IConfig $config,
 	) {
 		parent::__construct(self::APP_ID, $request);
 	}
@@ -47,7 +46,7 @@ class SettingsController extends Controller {
 		string $apiUrl,
 		string $adminEmail,
 		?string $adminPassword = null,
-		?string $webhookSecret = null
+		?string $webhookSecret = null,
 	): JSONResponse {
 		try {
 			if (trim($apiUrl) !== '') {

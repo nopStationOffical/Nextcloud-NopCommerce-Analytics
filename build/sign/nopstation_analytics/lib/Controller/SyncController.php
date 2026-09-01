@@ -21,7 +21,7 @@ class SyncController extends Controller {
 	public function __construct(
 		IRequest $request,
 		private SyncService $syncService,
-		private SyncLogMapper $syncLogMapper
+		private SyncLogMapper $syncLogMapper,
 	) {
 		parent::__construct(self::APP_ID, $request);
 	}
@@ -53,7 +53,7 @@ class SyncController extends Controller {
 		$lastSync = $this->syncService->getLastSyncTime();
 		$logs = $this->syncLogMapper->findRecent(15);
 
-		$formattedLogs = array_map(fn($log) => [
+		$formattedLogs = array_map(fn ($log) => [
 			'id' => $log->getId(),
 			'syncType' => $log->getSyncType(),
 			'entityType' => $log->getEntityType(),

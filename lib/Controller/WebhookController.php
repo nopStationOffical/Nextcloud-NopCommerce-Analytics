@@ -19,7 +19,7 @@ class WebhookController extends Controller {
 
 	public function __construct(
 		IRequest $request,
-		private WebhookService $webhookService
+		private WebhookService $webhookService,
 	) {
 		parent::__construct(self::APP_ID, $request);
 	}
