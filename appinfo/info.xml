@@ -1,25 +1,26 @@
 <?xml version="1.0"?>
 <info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
-	<id>app_template</id>
-	<name>App Template</name>
-	<summary>An example summary</summary>
-	<description>An example description</description>
+	<id>nopstation_analytics</id>
+	<name>nopCommerce Sales Analytics</name>
+	<summary>nopCommerce Sales Analytics &amp; Reporting Studio for Nextcloud</summary>
+	<description>Synchronizes raw e-commerce entities (orders, customers, products, shipments) from nopCommerce via REST APIs and Webhooks, stores them locally, and generates executive KPI dashboards, sales summaries, time-series trends, customer segmentation, bestseller rankings, and automated report exports.</description>
 	<version>1.0.0</version>
 	<licence>AGPL-3.0-or-later</licence>
-	<author mail="example@example.com" homepage="https://example.com">Example</author>
-	<namespace>AppTemplate</namespace>
-	<category>customization</category>
-	<bugs>https://example.com/bugs</bugs>
+	<author mail="support@nop-station.com" homepage="https://nop-station.com">NopStation</author>
+	<namespace>NopStationAnalytics</namespace>
+	<category>office</category>
+	<bugs>https://github.com/nopStation/nextcloud-nopstation-analytics/issues</bugs>
 	<dependencies>
-		<nextcloud min-version="31" max-version="35"/>
+		<nextcloud min-version="28" max-version="35"/>
 	</dependencies>
 	<navigations>
 		<navigation>
-			<id>app_template</id>
-			<name>App Template</name>
-			<route>app_template.page.index</route>
+			<id>nopstation_analytics</id>
+			<name>nopCommerce Analytics</name>
+			<route>nopstation_analytics.page.index</route>
 			<icon>app.svg</icon>
+			<order>10</order>
 			<type>link</type>
 		</navigation>
 	</navigations>
