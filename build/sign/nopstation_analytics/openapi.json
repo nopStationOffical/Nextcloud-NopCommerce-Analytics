@@ -76,7 +76,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Successful response with index data",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -97,8 +97,13 @@
                                                 },
                                                 "data": {
                                                     "type": "object",
-                                                    "additionalProperties": {
-                                                        "type": "string"
+                                                    "required": [
+                                                        "message"
+                                                    ],
+                                                    "properties": {
+                                                        "message": {
+                                                            "type": "string"
+                                                        }
                                                     }
                                                 }
                                             }
