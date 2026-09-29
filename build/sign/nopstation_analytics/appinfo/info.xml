@@ -87,7 +87,7 @@ A powerful, enterprise-grade Nextcloud application designed to seamlessly bridge
 	<discussion>https://github.com/nopStationOffical/Nextcloud-NopCommerce-Analytics/discussions</discussion>
 	<bugs>https://github.com/nopStationOffical/Nextcloud-NopCommerce-Analytics/issues</bugs>
 	<repository type="git">https://github.com/nopStationOffical/Nextcloud-NopCommerce-Analytics.git</repository>
-	<screenshot>https://raw.githubusercontent.com/nopStationOffical/Nextcloud-NopCommerce-Analytics/main/screenshots/nopCommerceAnalytics_by_nopStation_screenshot.png</screenshot>
+	<screenshot>https://www.nop-station.com/images/uploaded/Topics/ies-operation.png</screenshot>
 	<dependencies>
 		<nextcloud min-version="28" max-version="35"/>
 	</dependencies>
