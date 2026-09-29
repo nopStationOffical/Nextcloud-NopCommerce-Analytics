@@ -88,9 +88,12 @@ jobs:
         run: |
           if [ -f "./vendor-bin/openapi-extractor/vendor/bin/generate-spec" ]; then
             php ./vendor-bin/openapi-extractor/vendor/bin/generate-spec
+          elif [ -f "./vendor-bin/openapi-extractor/vendor/nextcloud/openapi-extractor/bin/generate-spec" ]; then
+            php ./vendor-bin/openapi-extractor/vendor/nextcloud/openapi-extractor/bin/generate-spec
           else
             composer run openapi
           fi
+          git checkout composer.json composer.lock || true
 
       - name: Check openapi*.json and typescript changes
         run: |
