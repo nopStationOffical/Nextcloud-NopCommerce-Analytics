@@ -2,8 +2,8 @@
     "openapi": "3.0.3",
     "info": {
         "title": "nopstation_analytics",
-        "version": "1.0.4",
-        "description": "Synchronizes raw e-commerce entities (orders, customers, products, shipments) from nopCommerce via REST APIs and Webhooks, stores them locally, and generates executive KPI dashboards, sales summaries, time-series trends, customer segmentation, bestseller rankings, and automated report exports.",
+        "version": "0.0.1",
+        "description": "nopCommerce Sales Analytics & Reporting Studio by nopStation",
         "license": {
             "name": "AGPL-3.0-or-later"
         }
@@ -76,7 +76,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "The API is active and running",
+                        "description": "OK",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -97,13 +97,8 @@
                                                 },
                                                 "data": {
                                                     "type": "object",
-                                                    "required": [
-                                                        "message"
-                                                    ],
-                                                    "properties": {
-                                                        "message": {
-                                                            "type": "string"
-                                                        }
+                                                    "additionalProperties": {
+                                                        "type": "string"
                                                     }
                                                 }
                                             }
