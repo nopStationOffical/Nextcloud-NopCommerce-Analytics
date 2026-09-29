@@ -2,7 +2,7 @@
 
 **Test Execution Date:** 2026-09-01 09:28:15 UTC  
 **Environment:** Nextcloud 31.0.0 staging container (`nextcloud_server-app-1` on `10.112.165.132`)  
-**App Version:** `1.0.4`  
+**App Version:** `1.0.0`  
 **Overall Result:** **14/14 Passed (100% PASS RATE)**  
 
 ---
@@ -37,7 +37,7 @@ All 14 functional and compliance test cases defined in [`TEST_CASES.md`](TEST_CA
 
 1. **Brand Identity & App Store Compliance (`TC-14`)**:
    - `info.xml` validated against official `https://apps.nextcloud.com/schema/apps/info.xsd` schema: `VALID SCHEMA`.
-   - Name updated to **`nopCommerce Analytics by nopStation`** (version `1.0.4`).
+   - Name updated to **`nopCommerce Analytics by nopStation`** (version `1.0.0`).
    - 4096-bit RSA keypair and CSR verified with Subject `CN=nopstation_analytics`.
 
 2. **Hierarchical 3-Level Data Inspection (`TC-06`, `TC-08`)**:

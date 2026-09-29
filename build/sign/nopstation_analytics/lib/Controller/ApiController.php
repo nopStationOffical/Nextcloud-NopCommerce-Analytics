@@ -14,7 +14,7 @@ class ApiController extends OCSController {
 	/**
 	 * Health check / ping endpoint
 	 *
-	 * @return DataResponse<Http::STATUS_OK, array{message: string}, array{}> The API is active and running
+	 * @return DataResponse<Http::STATUS_OK, array{message: string}, array{}> Successful response with index data
 	 */
 	#[NoAdminRequired]
 	#[ApiRoute(verb: 'GET', url: '/api')]
